@@ -370,7 +370,7 @@ PUU32 g_GUIDef[]=
 		PUM_ADDCHILD, PU_LABEL("mission window must be OPEN! Press"),
 		PUM_ADDCHILD, PU_LABEL("(v) button, otherwise this won't work"),
 		PUM_ADDCHILD, PU_LABEL(" "), 
-		PUM_ADDCHILD, PU_LABEL("'Good/Bad' doesn't do anything in PRK"),
+		PUM_ADDCHILD, PU_LABEL(" "),
 		PU_ENDGROUP,
 		PU_ENDGROUP,
 
