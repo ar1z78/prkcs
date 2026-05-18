@@ -1,5 +1,9 @@
 #include "BuyingAgent.h"
 #include "clicksaver.h"
+#include <commctrl.h>
+#pragma comment(lib, "comctl32.lib")
+
+
 
 // Generate a mouse movement and button click sequence
 // to make AO generate new missions.
@@ -12,9 +16,9 @@
 // upper left corner.
 int BuyingAgent(void)
 {
-	HWND AOWnd, BAWnd;
-	POINT MousePos;
-	LPARAM lParam;
+	HWND AOWnd;
+	//POINT MousePos;
+	//LPARAM lParam;
 
 	// Find AO window
 	if (!(AOWnd = FindWindow("Anarchy client", NULL)))
@@ -42,31 +46,19 @@ int BuyingAgent(void)
 	// Delay
 	//Sleep(puGetAttribute(puGetObjectFromCollection(g_pCol, CS_ROLLWAIT), PUA_TEXTENTRY_VALUE));
 	// === MODIFIED INTERRUPTIBLE DELAY ===
-	int totalWaitTime = puGetAttribute(puGetObjectFromCollection(g_pCol, CS_ROLLWAIT), PUA_TEXTENTRY_VALUE);
-	int elapsedTime = 0;
-	int interval = 50; // Check every 50 milliseconds
-
-	while (elapsedTime < totalWaitTime)
+	// Set a timer that will post a WM_TIMER message to the main window after 'delay' ms
+	HWND hMainWnd = (HWND)puGetAttribute(g_MainWin, PUA_WINDOW_HANDLE);
+	int delay = puGetAttribute(puGetObjectFromCollection(g_pCol, CS_ROLLWAIT), PUA_TEXTENTRY_VALUE);
+	g_TimerID = SetTimer(hMainWnd, BUYINGAGENT_TIMER, delay, NULL);
+	if (g_TimerID == 0)
 	{
-		// 1. Process standard Windows messages to keep the GUI responsive
-		MSG msg;
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
-		{
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-
-		// 2. Check the global variables modified by your CSAM_STOPBUYINGAGENT event handler
-		if (g_BuyingAgentCount == 0)
-		{
-			return FALSE; // Stop button was clicked, exit immediately
-		}
-
-		Sleep(interval);
-		elapsedTime += interval;
+		//DisplayErrorMessage("Failed to create timer.", TRUE);
+		return FALSE;
 	}
 	// ===================================
 
+	//Moved to clicksaver.c case CSAM_BUYINGAGENT_DOMISSION:
+	/*
 	// Force AO on top
 	SetForegroundWindow(AOWnd);
 
@@ -95,7 +87,7 @@ int BuyingAgent(void)
 
 	SendMessage(AOWnd, WM_LBUTTONDOWN, 0, lParam);
 	SendMessage(AOWnd, WM_LBUTTONUP, 0, lParam);
-
+	*/
 	return TRUE;
 }
 

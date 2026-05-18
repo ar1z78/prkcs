@@ -87,7 +87,6 @@ PUU32 g_BuyingAgentMissions = 0;
 PUU32 g_bFirstRound = TRUE;
 PUU8 g_MishNumber = 0, g_FoundMish = -1;
 PUU8 g_bFullscreen = 0;
-PUU32 isManualStop = 0;
 
 char g_CurrentPacket[ 65536 ];
 
@@ -115,7 +114,20 @@ void CleanUp()
 	puDeleteObjectCollection(g_pCol);
 	puClear();
 }
-
+// ========== WINDOW SUBCLASS FOR TIMER HANDLING ==========
+LRESULT CALLBACK MainWndProcHook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
+{
+	if (uMsg == WM_TIMER && wParam == BUYINGAGENT_TIMER)
+	{
+		// Timer expired – kill it and post an application message to the main loop
+		KillTimer(hWnd, BUYINGAGENT_TIMER);
+		g_TimerID = 0;
+		puPostAppMessage(CSAM_BUYINGAGENT_DOMISSION, 0);
+		return 0;
+	}
+	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
+}
+// ========================================================
 int main( int argc, char** argv )
 {
     pusAppMessage* pAppMsg;
@@ -260,6 +272,10 @@ int main( int argc, char** argv )
     //puSetAttribute( puGetObjectFromCollection( g_pCol, CS_OPTIONSFOLD3 ), PUA_FOLD_FOLDED, TRUE);
     puSetAttribute( g_MainWin, PUA_WINDOW_OPENED, TRUE );
 
+	// Subclass the main window to catch WM_TIMER
+	HWND hMainWnd = (HWND)puGetAttribute(g_MainWin, PUA_WINDOW_HANDLE);
+	SetWindowSubclass(hMainWnd, MainWndProcHook, 0, 0);
+
     HICON hIcon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
     if( hIcon )
     {
@@ -276,12 +292,64 @@ int main( int argc, char** argv )
         switch( pAppMsg->Message )
         {
         case CSAM_STOPBUYINGAGENT:
+			// Kill any pending timer
+			if (g_TimerID) {
+				KillTimer(hMainWnd, BUYINGAGENT_TIMER);
+				g_TimerID = 0;
+			}
             g_BuyingAgentCount = 0;
             g_BuyingAgentMissions = 0;
-			isManualStop = 1;
 			EndBuyingAgent();
 
             // Fall through
+
+		case CSAM_BUYINGAGENT_DOMISSION:
+			// Timer expired – send the click if not paused
+			if (g_BuyingAgentCount > 0)
+			{
+				HWND AOWnd = FindWindow("Anarchy client", NULL);
+				if (AOWnd)
+				{
+					// 1. Get the thread IDs for both windows
+					DWORD foregroundThreadID = GetWindowThreadProcessId(GetForegroundWindow(), NULL);
+					DWORD targetThreadID = GetWindowThreadProcessId(AOWnd, NULL);
+
+					// 2. Attach threads if they are different
+					if (foregroundThreadID != targetThreadID)
+					{
+						AttachThreadInput(foregroundThreadID, targetThreadID, TRUE);
+					}
+
+					// 3. Force the window to the foreground and show it
+					ShowWindow(AOWnd, SW_RESTORE); // Ensures it isn't minimized
+					SetForegroundWindow(AOWnd);
+					SetFocus(AOWnd);
+
+					// 4. Detach the threads immediately
+					if (foregroundThreadID != targetThreadID)
+					{
+						AttachThreadInput(foregroundThreadID, targetThreadID, FALSE);
+					}
+
+					// 5. Run your mouse logic
+					POINT MousePos = { 99, 180 };
+					LPARAM lParam = MousePos.y << 16 | MousePos.x;
+					if (g_bFirstRound)
+					{
+						ClientToScreen(AOWnd, &MousePos);
+						SetCursorPos(MousePos.x, MousePos.y);
+						g_bFirstRound = FALSE;
+					}
+					SendMessage(AOWnd, WM_LBUTTONDOWN, 0, lParam);
+					SendMessage(AOWnd, WM_LBUTTONUP, 0, lParam);
+				}
+
+
+				// Decrement counters after sending click
+				g_BuyingAgentCount--;
+
+			}
+			break;
 
         case CSAM_NEWMISSIONS:
             if( !g_BuyingAgentCount && g_bFullscreen )
