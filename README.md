@@ -1,5 +1,5 @@
 
-ClickSaver Updated by Ar1z for Project Rubi-Ka
+ClickSaver 2.8.3 Updated by Ar1z for Project Rubi-Ka
 =====================================================
 https://users.math.uoc.gr/~ar1z/index.html
 
@@ -198,11 +198,15 @@ DLL patching done using Microsofts Detours.
 
 History
 -------
+2.8.3		- Removed the Buying Agent window and cleaned up the gui files. Moved the Stop button for the 
+			  buying agent to the main window next to the Start button, cleaned up the code and moved functions
+			  to their own files. Recreated the get png function so that it takes less time and doesn't need
+			  zlib anymore. Changed internal clicksaver name so you can have another developers clicksaver
+			  open if you wish.
 2.7.5		- Merged the tabs Items, Locations, Type into one tab (Search), Merged the tabs Values, Sliders,
 			  Options into one tab (Settings). Removed hiding the main window. Removed Msgboxes and added a 
 			  status bar to display messages. Replaced Error Msgbox with standard windows dialog. Fixed some
 			  error that weren't shown. Tidied up the code.
-
 2.7.1		- Dew to how missions are handled in prk cs was missing some items from return or find missions.
 			  This is fixed by searching all the mission description for the item you want. This has the side
 			  effect that only matching items will be shown in the find box.
