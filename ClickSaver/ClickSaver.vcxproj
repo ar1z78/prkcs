@@ -45,8 +45,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <OutDir>$(SolutionDir)Bin\$(Configuration)\</OutDir>
     <IntDir>$(SolutionDir)Obj\$(ProjectName)\$(Configuration)\</IntDir>
-    <LibraryPath>.\3rdParty\sqlite3\Release;$(LibraryPath)</LibraryPath>
-    <IncludePath>.\3rdParty\sqlite3;$(IncludePath)</IncludePath>
+    <LibraryPath>$(LibraryPath)</LibraryPath>
+    <IncludePath>$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -96,7 +96,7 @@
       <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
     <Link>
-      <AdditionalDependencies>zlibrel.lib;Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>Winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <AdditionalLibraryDirectories>$(SolutionDir)3rdParty/sqlite3/Release/sqlite.lib;$(SolutionDir)3rdParty/zlib/lib;$(SolutionDir)3rdParty/BerkeleyDB;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <SubSystem>Windows</SubSystem>
@@ -114,8 +114,10 @@
     </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="BuyingAgent.c" />
     <ClCompile Include="clicksaver.c" />
     <ClCompile Include="CoreUtils.cpp" />
+    <ClCompile Include="aomd.c" />
     <ClCompile Include="guidef.c" />
     <ClCompile Include="hook.cpp" />
     <ClCompile Include="mission.c" />
@@ -124,8 +126,10 @@
     <ClCompile Include="sqlite3.c" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BuyingAgent.h" />
     <ClInclude Include="clicksaver.h" />
     <ClInclude Include="CoreUtils.h" />
+    <ClInclude Include="aomd.h" />
     <ClInclude Include="mission.h" />
     <ClInclude Include="Platform.h" />
     <ClInclude Include="rdb.h" />

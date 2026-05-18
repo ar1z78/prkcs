@@ -116,8 +116,17 @@ PUU32 g_GUIDef[]=
                         PUA_CONTROL_ISBUTTON, TRUE, 0,
                         PUM_ADDNOTIFICATION,
                             PUNOTIFY_CONDITION_ATTREQUALS, PUA_CONTROL_CLICKED, TRUE,
-                            PUNOTIFY_ACTION_APPMSG, CSAM_PRESTARTBUYINGAGENT,
+                            PUNOTIFY_ACTION_APPMSG, CSAM_STARTBUYINGAGENT,
                         0,
+					PUM_ADDCHILD, PU_ACTION_OBJDEF, 0, (PUU32)"Text",
+						PUA_TEXT_STRING, (PUU32)"Stop",
+						PUA_CONTROL_FRAME, PUFRAME_BUTTON,
+						PUA_CONTROL_HASKEYBOARDFOCUS, TRUE,
+						PUA_CONTROL_ISBUTTON, TRUE, 0,
+						PUM_ADDNOTIFICATION,
+						PUNOTIFY_CONDITION_ATTREQUALS, PUA_CONTROL_CLICKED, TRUE,
+						PUNOTIFY_ACTION_APPMSG, CSAM_STOPBUYINGAGENT,
+						0,
 
             
         
@@ -477,68 +486,6 @@ PUU32 g_GUIDef[]=
     0,
 // ****
 
-// **** Buying agent help window
-    PU_ACTION_OBJDEF, CS_BUYINGAGENT_INFOWINDOW,
-    ( PUU32 )"Window",
-    PUA_WINDOW_TITLE, ( PUU32 )"Buying agent help - Please read",
-    PUA_WINDOW_NOCLOSEBOX, TRUE,
-    PUA_WINDOW_FORCETOP, TRUE,
-    PUA_WINDOW_HORCENTER, TRUE,
-    PUA_WINDOW_VERCENTER, TRUE,
-    PUA_WINDOW_CONTENTS,
-        PU_VERGROUP,
-            PUM_ADDCHILD, PU_HORSPACER( 20 ),
-            PUM_ADDCHILD, PU_HORGROUP,
-                PUM_ADDCHILD, PU_FIXSPACER( 20, 1 ),
-
-                // Gotta implement a word-wrapping text display class in PUL...
-                // Too lazy atm to do it though ;)
-                PUM_ADDCHILD, PU_VERGROUP,
-                    PUM_ADDCHILD, PU_LABEL( "The buying agent will generate missions from" ),
-                    PUM_ADDCHILD, PU_LABEL( "the terminal automatically until it finds" ),
-                    PUM_ADDCHILD, PU_LABEL( "a mission that matches your search criterias." ),
-                    PUM_ADDCHILD, PU_LABEL( " " ),
-                    PUM_ADDCHILD, PU_LABEL( "You have to open the mission terminal window" ),
-                    PUM_ADDCHILD, PU_LABEL( "and put it completly in the upper left corner" ),
-                    PUM_ADDCHILD, PU_LABEL( "before starting the buying agent." ),
-                    PUM_ADDCHILD, PU_LABEL( " " ),
-                    PUM_ADDCHILD, PU_LABEL( "Be sure to set up a reasonnable amount of" ),
-                    PUM_ADDCHILD, PU_LABEL( "maximum number tries before starting." ),
-                PU_ENDGROUP,
-
-                PUM_ADDCHILD, PU_FIXSPACER( 20, 1 ),
-            PU_ENDGROUP,
-            PUM_ADDCHILD, PU_HORSPACER( 20 ),
-
-            PUM_ADDCHILD, PU_ACTION_OBJDEF, CS_BAINFO2_CB, ( PUU32 )"CheckBox",
-                PUA_CHECKBOX_LABEL, ( PUU32 )"Show this window next time",
-                PUA_CHECKBOX_CHECKED, TRUE, 0,
-                PUM_ADDNOTIFICATION,
-                    PUNOTIFY_CONDITION_ATTRCHANGE, PUA_CHECKBOX_CHECKED,
-                    PUNOTIFY_ACTION_SETVAL, CS_BAINFO_CB, PUA_CHECKBOX_CHECKED,
-                0,
-
-            PUM_ADDCHILD, PU_HORGROUP,
-                PUM_ADDCHILD, PU_ACTION_OBJDEF, 0, ( PUU32 )"Text", PUA_TEXT_STRING, ( PUU32 )"Start",
-                    PUA_CONTROL_HASKEYBOARDFOCUS, TRUE,
-                    PUA_CONTROL_FRAME, PUFRAME_BUTTON,
-                    PUA_CONTROL_ISBUTTON, TRUE, 0,
-                    PUM_ADDNOTIFICATION,
-                        PUNOTIFY_CONDITION_ATTREQUALS, PUA_CONTROL_CLICKED, TRUE,
-                        PUNOTIFY_ACTION_APPMSG, CSAM_STARTBUYINGAGENT,
-                    0,
-                PUM_ADDCHILD, PU_ACTION_OBJDEF, 0, ( PUU32 )"Text", PUA_TEXT_STRING, ( PUU32 )"Cancel",
-                    PUA_CONTROL_FRAME, PUFRAME_BUTTON,
-                    PUA_CONTROL_ISBUTTON, TRUE, 0,
-                    PUM_ADDNOTIFICATION,
-                        PUNOTIFY_CONDITION_ATTREQUALS, PUA_CONTROL_CLICKED, TRUE,
-                        PUNOTIFY_ACTION_SET, CS_BUYINGAGENT_INFOWINDOW, PUA_WINDOW_OPENED, FALSE,
-                    0,
-            PU_ENDGROUP,
-        PU_ENDGROUP,
-    0, 0,
-// ****
-
 // **** Fullscreen help window
     PU_ACTION_OBJDEF, CS_FULLSCREEN_WINDOW,
     ( PUU32 )"Window",
@@ -591,35 +538,7 @@ PUU32 g_GUIDef[]=
 // ****
 
 
-// **** Buying agent window
-    PU_ACTION_OBJDEF, CS_BUYINGAGENT_WINDOW,
-    ( PUU32 )"Window",
-    PUA_WINDOW_TITLE, ( PUU32 )"ClickSaver",
-    PUA_WINDOW_NOCLOSEBOX, TRUE,
-    PUA_WINDOW_FORCETOP, TRUE,
-    PUA_WINDOW_HORCENTER, TRUE,
-    PUA_WINDOW_VERCENTER, TRUE,
-    PUA_WINDOW_CONTENTS,
-        PU_VERGROUP,
-            PUM_ADDCHILD, PU_HORSPACER( 20 ),
-            PUM_ADDCHILD, PU_HORGROUP,
-                PUM_ADDCHILD, PU_FIXSPACER( 20, 1 ),
-                PUM_ADDCHILD, PU_LABEL( "Buying agent is running..." ),
-                PUM_ADDCHILD, PU_FIXSPACER( 20, 1 ),
-            PU_ENDGROUP,
-            PUM_ADDCHILD, PU_HORSPACER( 20 ),
-            PUM_ADDCHILD, PU_ACTION_OBJDEF, 0, ( PUU32 )"Text",
-                PUA_TEXT_STRING, ( PUU32 )"Stop",
-                PUA_CONTROL_FRAME, PUFRAME_BUTTON,
-                PUA_CONTROL_HASKEYBOARDFOCUS, TRUE,
-                PUA_CONTROL_ISBUTTON, TRUE, 0,
-                PUM_ADDNOTIFICATION,
-                    PUNOTIFY_CONDITION_ATTREQUALS, PUA_CONTROL_CLICKED, TRUE,
-                        PUNOTIFY_ACTION_APPMSG, CSAM_STOPBUYINGAGENT,
-                0,
-        PU_ENDGROUP,
-    0, 0,
-// ****
+
 
     PU_ACTION_END
 };

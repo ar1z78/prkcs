@@ -27,8 +27,16 @@
     <ClCompile Include="clicksaver.c">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="rdb.c" />
     <ClCompile Include="settings.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="BuyingAgent.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="aomd.c">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="rdb.c">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
@@ -51,8 +59,16 @@
     <ClInclude Include="CoreUtils.h">
       <Filter>Source</Filter>
     </ClInclude>
-    <ClInclude Include="rdb.h" />
     <ClInclude Include="settings.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="BuyingAgent.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="aomd.h">
+      <Filter>Source</Filter>
+    </ClInclude>
+    <ClInclude Include="rdb.h">
       <Filter>Source</Filter>
     </ClInclude>
   </ItemGroup>

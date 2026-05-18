@@ -196,13 +196,13 @@ extern "C" DWORD WINAPI HookManagerThread( void* _pParam )
     HookWndClass.hCursor = NULL;
     HookWndClass.hbrBackground = NULL;
     HookWndClass.lpszMenuName = NULL;
-    HookWndClass.lpszClassName = "ClickSaverHookWindowClass";
+    HookWndClass.lpszClassName = "Ar1zClickSaverHookWindowClass";
     HookWndClass.hIconSm = NULL;
 
     RegisterClassEx( &HookWndClass );
 
     /* Create window */
-    hWnd = CreateWindowEx( 0, "ClickSaverHookWindowClass", "ClickSaverHookWindow", WS_MINIMIZE, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, NULL, NULL );
+    hWnd = CreateWindowEx( 0, "Ar1zClickSaverHookWindowClass", "Ar1zClickSaverHookWindow", WS_MINIMIZE, CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, NULL, NULL, NULL, NULL );
     Inject();
     Timer = SetTimer( hWnd, 0, 5000, NULL );
     while( RetCode = GetMessage( &msg, NULL, 0, 0 ) )

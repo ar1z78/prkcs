@@ -74,17 +74,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "CoreUtils.h"
 #include "rdb.h"
 #include "settings.h"
-
-#pragma comment(lib, "shlwapi.lib")
-
-
-void CleanUp();
-
-void GetFolder( HWND hWndOwner, char *strTitle, char *strPath );
-BOOL GetFile( HWND hWndOwner, BOOL saving, char *buffer, int buffersize );
-
-int BuyingAgent();
-void EndBuyingAgent();
+#include "BuyingAgent.h"
 
 extern PUU32 g_GUIDef[];
 pusObjectCollection* g_pCol;
@@ -97,6 +87,7 @@ PUU32 g_BuyingAgentMissions = 0;
 PUU32 g_bFirstRound = TRUE;
 PUU8 g_MishNumber = 0, g_FoundMish = -1;
 PUU8 g_bFullscreen = 0;
+PUU32 isManualStop = 0;
 
 char g_CurrentPacket[ 65536 ];
 
@@ -107,7 +98,23 @@ HANDLE g_Mutex = INVALID_HANDLE_VALUE;
 HANDLE g_Thread = INVALID_HANDLE_VALUE;
 DWORD WINAPI HookManagerThread( void *pParam );
 
-//DB* g_pDB = NULL;
+void CleanUp()
+{
+	if (g_Thread != INVALID_HANDLE_VALUE)
+	{
+		TerminateThread(g_Thread, 0);
+	}
+
+	if (g_Mutex != INVALID_HANDLE_VALUE)
+	{
+		CloseHandle(g_Mutex);
+	}
+
+	ReleaseAODatabase();
+
+	puDeleteObjectCollection(g_pCol);
+	puClear();
+}
 
 int main( int argc, char** argv )
 {
@@ -183,19 +190,20 @@ int main( int argc, char** argv )
 	fclose(fp);
 
 	// 1. Create Mutex FIRST to isolate and guarantee GetLastError() accuracy
-	g_Mutex = CreateMutex(NULL, FALSE, "ClickSaver");
+	g_Mutex = CreateMutex(NULL, FALSE, "Ar1zClickSaver");
 	DWORD dwMutexError = GetLastError(); // Immediately cache the error status
 
 	if (g_Mutex == NULL)
 	{
 		ShowErrorMessage("Couldn't create mutex.");
+
 		CleanUp();
 		return -1;
 	}
 
 	if (dwMutexError == ERROR_ALREADY_EXISTS)
 	{
-		HWND hWnd = FindWindow("ClickSaverHookWindowClass", "ClickSaverHookWindow");
+		HWND hWnd = FindWindow("Ar1zClickSaverHookWindowClass", "Ar1zClickSaverHookWindow");
 		if (hWnd)
 		{
 			// Send message to original window if needed
@@ -264,12 +272,14 @@ int main( int argc, char** argv )
     {
         pAppMsg = puWaitAppMessages();
 
+
         switch( pAppMsg->Message )
         {
         case CSAM_STOPBUYINGAGENT:
             g_BuyingAgentCount = 0;
             g_BuyingAgentMissions = 0;
-            EndBuyingAgent();
+			isManualStop = 1;
+			EndBuyingAgent();
 
             // Fall through
 
@@ -308,9 +318,10 @@ int main( int argc, char** argv )
             }
 
             //if( !g_BuyingAgentCount )
+
             {
                 pMissionData = g_CurrentPacket;
-                puSetAttribute( g_MainWin, PUA_WINDOW_DEFERUPDATE, TRUE );
+                //puSetAttribute( g_MainWin, PUA_WINDOW_DEFERUPDATE, TRUE );
 
                 WaitForSingleObject( g_Mutex, INFINITE );
                 g_FoundMish = 255;
@@ -339,7 +350,7 @@ int main( int argc, char** argv )
 
                 puSetAttribute( g_MainWin, PUA_WINDOW_DEFERUPDATE, FALSE );
 
-                if( PUL_GET_CB( CS_SOUNDS_CB ) )
+				if (PUL_GET_CB(CS_SOUNDS_CB) && !(pAppMsg->Message == CSAM_STOPBUYINGAGENT))
                 {
                     if( g_FoundMish == 255 ) // Not Found
                     {
@@ -422,18 +433,15 @@ int main( int argc, char** argv )
             }
             break;
 
-        case CSAM_PRESTARTBUYINGAGENT:
-            if( puGetAttribute( puGetObjectFromCollection( g_pCol, CS_BAINFO_CB ), PUA_CHECKBOX_CHECKED ) )
-            {
-                puSetAttribute( puGetObjectFromCollection( g_pCol, CS_BUYINGAGENT_INFOWINDOW ), PUA_WINDOW_OPENED, TRUE );
-                break;
-            }
-
-            // Fall through
-
         case CSAM_STARTBUYINGAGENT:
-            puSetAttribute( puGetObjectFromCollection( g_pCol, CS_BUYINGAGENT_INFOWINDOW ), PUA_WINDOW_OPENED, FALSE );
-
+			if (puGetAttribute(puGetObjectFromCollection(g_pCol, CS_BAINFO_CB), PUA_CHECKBOX_CHECKED))
+			{
+				ShowInfoMessage("The buying agent will generate missions from the terminal automatically "
+					"until it finds a mission that matches your search criteria. "
+					"You have to open the mission terminal window and put it in the upper left corner "
+					"before starting the buying agent. "
+					"Be sure to set up a reasonnable amount of maximum number tries before starting.");
+			}
            // if( !g_BuyingAgentCount )
             {
                 PUU32 bItemListOk = FALSE, bLocListOk = FALSE, bTypeListOk = FALSE;
@@ -603,338 +611,4 @@ int main( int argc, char** argv )
 }
 
 
-void CleanUp()
-{
-    if( g_Thread != INVALID_HANDLE_VALUE )
-    {
-        TerminateThread( g_Thread, 0 );
-    }
 
-    if( g_Mutex != INVALID_HANDLE_VALUE )
-    {
-        CloseHandle( g_Mutex );
-    }
-
-	ReleaseAODatabase();
-
-    puDeleteObjectCollection( g_pCol );
-    puClear();
-}
-
-
-/* Prompt user for folder
-   (from AOMD)
-*/
-void GetFolder( HWND hWndOwner, char *strTitle, char *strPath )
-{
-    BROWSEINFO udtBI;
-    ITEMIDLIST *udtIDList;
-
-    /* Initialise */
-    udtBI.hwndOwner = hWndOwner;
-    udtBI.pidlRoot = NULL;
-    udtBI.pszDisplayName = NULL;
-    udtBI.lpszTitle = strTitle;
-    udtBI.ulFlags = BIF_RETURNONLYFSDIRS;
-    udtBI.lpfn = NULL;
-    udtBI.lParam = 0;
-    udtBI.iImage = 0;
-
-    /* Prompt user for folder */
-    udtIDList = SHBrowseForFolder( &udtBI );
-
-    /* Extract pathname */
-    if( !SHGetPathFromIDList( udtIDList, strPath ) )
-    {
-        strPath[ 0 ] = 0; // Zero-length if failure
-    }
-}
-
-
-BOOL GetFile( HWND hWndOwner, BOOL saving, char* buffer, int buffersize )
-{
-    OPENFILENAME ofn;
-
-    ZeroMemory( &ofn, sizeof( ofn ) );
-
-    /* Initialise */
-    ofn.hwndOwner = hWndOwner;
-    ofn.lStructSize = sizeof( OPENFILENAME );
-    if( saving )
-    {
-        ofn.Flags = OFN_HIDEREADONLY;
-    }
-    else
-    {
-        ofn.Flags = OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY;
-    }
-
-    ofn.lpstrFilter = "Clicksaver Files\0*.CS\0";
-    ofn.lpstrFile = buffer;
-    ofn.lpstrFile[ 0 ] = '\0';
-    ofn.nMaxFile = buffersize;
-    ofn.nFilterIndex = 0;
-    ofn.lpstrInitialDir = ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFileTitle = 0;
-
-    /* Prompt user for folder */
-    if( saving )
-    {
-        return GetSaveFileName( &ofn );
-    }
-    else
-    {
-        return GetOpenFileName( &ofn );
-    }
-
-    return FALSE;
-}
-
-
-// Generate a mouse movement and button click sequence
-// to make AO generate new missions.
-// All coordinates are hardcoded because I'm too
-// lazy to make them configurable.
-// However, it's not that much of a problem, since
-// I use coordinates relative to AO window.
-// So, it will work regardless of where the AO window is,
-// and with the mission window in AO snapped to the
-// upper left corner.
-int BuyingAgent()
-{
-    HWND AOWnd, BAWnd;
-    POINT MousePos;
-    LPARAM lParam;
-
-    // Find AO window
-    if( !( AOWnd = FindWindow( "Anarchy client", NULL ) ) )
-    {
-        //ShowErrorMessage( "Anarchy Online is not running.");
-		puSetAttribute(puGetObjectFromCollection(g_pCol, CS_STATUS_TEXT), PUA_TEXT_STRING, (PUU32)"Anarchy Online is not running.");
-        g_BuyingAgentCount = 0;
-        g_BuyingAgentMissions = 0;
-        return FALSE;
-    }
-
-    // Close main window
-    if( !g_bFullscreen )
-    {
-       // puSetAttribute( g_MainWin, PUA_WINDOW_OPENED, FALSE );
-
-        // Open buying agent window
-        puSetAttribute( puGetObjectFromCollection( g_pCol, CS_BUYINGAGENT_WINDOW ), PUA_WINDOW_OPENED, TRUE );
-
-        // Set keyboard focus on buying agent window
-        BAWnd = (HWND)puGetAttribute( puGetObjectFromCollection( g_pCol, CS_BUYINGAGENT_WINDOW ), PUA_WINDOW_HANDLE );
-        SetFocus( BAWnd );
-    }
-
-    // Delay
-    //Sleep( puGetAttribute( puGetObjectFromCollection( g_pCol, CS_BUYINGAGENTDELAY ), PUA_TEXTENTRY_VALUE ) );
-
-	Sleep(puGetAttribute(puGetObjectFromCollection(g_pCol, CS_ROLLWAIT), PUA_TEXTENTRY_VALUE));
-
-    // Force AO on top
-    SetForegroundWindow( AOWnd );
-
-    // Now we have the absolute position of the upper-left corner
-    // of AO display area on screen. We can now use that
-    // as a basis to generate mouse positions relative to
-    // the AO window.
-
-    // Click on "request mission"
-
-    // Now that we don't have to move the cursor
-    // around to ungray the request button, we
-    // move the mouse only once, to make it
-    // easy to abort the buying agent while
-    // it's running
-    MousePos.x = 99;
-    MousePos.y = 180;
-    lParam = MousePos.y << 16 | MousePos.x;
-
-    if( g_bFirstRound )
-    {
-        ClientToScreen( AOWnd, &MousePos );
-        SetCursorPos( MousePos.x, MousePos.y );
-        g_bFirstRound = FALSE;
-    }
-
-    SendMessage( AOWnd, WM_LBUTTONDOWN, 0, lParam );
-    SendMessage( AOWnd, WM_LBUTTONUP, 0, lParam );
-
-    return TRUE;
-}
-
-
-void EndBuyingAgent()
-{
-
-    if( !g_bFullscreen )
-    {
-        // Remove keyboard focus
-        SetFocus( NULL );
-
-        // Close buying agent window
-        puSetAttribute( puGetObjectFromCollection( g_pCol, CS_BUYINGAGENT_WINDOW ), PUA_WINDOW_OPENED, FALSE );
-
-        // Open main window
-        //puSetAttribute( g_MainWin, PUA_WINDOW_OPENED, TRUE );
-    }
-
-}
-
-
-void DebugPacket( void* pData, unsigned int length )
-{
-    unsigned int x;
-    unsigned char *data = (char *)pData;
-    char ps[ 70 ];
-    for( x = 0; x < length; x++ )
-    {
-        sprintf( &( ps[ x % 16 * 3 ] ), "%02X", data[ x ] );
-        ps[ x % 16 * 3 + 2 ] = ' ';
-        ps[ x % 16 + 48 ] = ( data[ x ] >= 32 && data[ x ] <= 127 ? data[ x ] : '.' );
-        ps[ x % 16 + 49 ] = '\n';
-        ps[ x % 16 + 50 ] = 0;
-        if( x % 16 == 15 ) WriteDebug( ps );
-    }
-
-    if( x % 16 != 0 )
-    {
-        for( x = x % 16; x < 16; x++ )
-        {
-            sprintf( &( ps[ x % 16 * 3 ] ), "  " );
-            ps[ x % 16 * 3 + 2 ] = ' ';
-        }
-        WriteDebug( ps );
-    }
-}
-
-
-void WriteLog( const char* Format, ... )
-{
-    /**/
-    va_list argptr;
-    static FILE *fp = NULL;
-    if( Format == NULL )
-    {
-        if( fp )
-        {
-            fclose( fp );
-            fp = NULL;
-        }
-        return;
-    }
-    if( PUL_GET_CB( CS_LOG_CB ) )
-    {
-        if( !fp )
-        {
-            fp = fopen( "clicksaver.log", "a" );
-        }
-        va_start( argptr, Format );
-        vfprintf( fp, Format, argptr );
-        va_end( argptr );
-    }
-    /**/
-}
-
-
-void WriteDebug( const char* txt )
-{
-#ifdef _DEBUG
-    static FILE *fp = NULL;
-    if( txt == NULL )
-    {
-        if( fp )
-        {
-            fclose( fp );
-            fp = NULL;
-        }
-        return;
-    }
-    if( !fp )
-    {
-        fp = fopen( "clicksaver.debug", "a" );
-    }
-    fprintf( fp, "%s", txt );
-#endif // _DEBUG
-}
-
-
-//slider setting functions
-
-void _dragMouse( int x0, int y0, int x1, int y1 )
-{
-    POINT MousePos;
-    LPARAM lParam;
-    HWND AOWnd;
-
-    // Find AO window
-    if( !( AOWnd = FindWindow( "Anarchy client", NULL ) ) )
-    {
-        //ShowErrorMessage( "Anarchy Online is not running." );
-		puSetAttribute(puGetObjectFromCollection(g_pCol, CS_STATUS_TEXT), PUA_TEXT_STRING, (PUU32)"Anarchy Online is not running.");
-        g_BuyingAgentCount = 0;
-        g_BuyingAgentMissions = 0;
-        return;
-    }
-    MousePos.x = x0;
-    MousePos.y = y0;
-    lParam = MousePos.y << 16 | MousePos.x;
-    ClientToScreen( AOWnd, &MousePos );
-    SetCursorPos( MousePos.x, MousePos.y );
-    SendMessage( AOWnd, WM_LBUTTONDOWN, 0, lParam );
-    Sleep( 250 );
-    MousePos.x = x1;
-    MousePos.y = y1;
-    lParam = MousePos.y << 16 | MousePos.x;
-    ClientToScreen( AOWnd, &MousePos );
-    SetCursorPos( MousePos.x, MousePos.y );
-    SendMessage( AOWnd, WM_MOUSEMOVE, 0, lParam );
-    Sleep( 250 );
-    SendMessage( AOWnd, WM_LBUTTONUP, 0, lParam );
-    Sleep( 250 );
-}
-
-
-/*
-these coords are from my initial observation with a macro program. they are ofset slightly.
-; options button
-; 200, 185
-; difficulty slider
-; 110, 165
-; 1st slider
-; 110, 210
-; then add 15 pixels in Y for each subsequent row
-; full left slider
-; X = 60
-; full right slider
-; X = 170
-*/
-
-
-float _linIinterp( float lo, float hi, float ratio )
-{
-    return ( hi - lo )*ratio + lo;
-}
-
-
-void _setSliders( int easy_hard, int good_bad, int order_chaos, int open_hidden, int phys_myst, int headon_stealth, int money_xp )
-{
-    int ypos = 210;
-
-    //_dragMouse(200, 165, 200, 165);
-    if( easy_hard != 50 ) _dragMouse( 102, 160, (int)_linIinterp( 64, 141, easy_hard / 100.0f ), 160 );
-    if( good_bad != 50 ) _dragMouse( 102, ypos, (int)_linIinterp( 64, 141, good_bad / 100.0f ), ypos );
-    ypos += 18;
-    if( order_chaos != 50 ) _dragMouse( 102, ypos, (int)_linIinterp( 64, 141, order_chaos / 100.0f ), ypos );
-    ypos += 18;
-    if( open_hidden != 50 ) _dragMouse( 102, ypos, (int)_linIinterp( 64, 141, open_hidden / 100.0f ), ypos );
-    ypos += 18;
-    if( phys_myst != 50 ) _dragMouse( 102, ypos, (int)_linIinterp( 64, 141, phys_myst / 100.0f ), ypos );
-    ypos += 18;
-    if( headon_stealth != 50 ) _dragMouse( 102, ypos, (int)_linIinterp( 64, 141, headon_stealth / 100.0f ), ypos );
-    ypos += 18;
-    if( money_xp != 50 ) _dragMouse( 102, ypos, (int)_linIinterp( 64, 141, money_xp / 100.0f ), ypos );
-}

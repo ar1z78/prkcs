@@ -51,7 +51,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #ifndef __CLICKSAVER_H__
 #define __CLICKSAVER_H__
 
-#define CS_VERSION "2.7.5"
+#define CS_VERSION "2.8.3"
 
 #include <windows.h>
 #include "mission.h"
@@ -162,15 +162,25 @@ enum
 	CSAM_SET_SLIDERS
 };
 
-extern PULID g_ItemWatchList;
-extern PULID g_LocWatchList;
-extern PULID g_TypeWatchList;
-extern pusObjectCollection* g_pCol;
-extern PUU32 g_BuyingAgentCount;
-extern PULID g_MainWin;
-extern PUU8 g_MishNumber, g_FoundMish;
-extern PUU8 g_bFullscreen;
-extern char g_AODir[MAX_PATH];
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+	extern PULID g_ItemWatchList;
+	extern PULID g_LocWatchList;
+	extern PULID g_TypeWatchList;
+	extern pusObjectCollection* g_pCol;
+	extern PUU32 g_BuyingAgentCount;
+	extern PULID g_MainWin;
+	extern PUU8 g_MishNumber, g_FoundMish;
+	extern PUU8 g_bFullscreen;
+	extern char g_AODir[MAX_PATH];
+	extern PUU32 g_BuyingAgentMissions;
+	extern PUU32 g_bFirstRound;
+
+#ifdef __cplusplus
+}
+#endif
 
 // Endianness macros
 #define EndianSwap16(x) ( ( x ) >> 8 | ( x ) << 8 )
@@ -184,10 +194,5 @@ extern char g_AODir[MAX_PATH];
 int OpenLocalDB();
 void ReleaseAODatabase();
 void* GetDataChunk(PUU32 _KeyHi, PUU32 _KeyLo, PUU32* _pSize);
-
-// Logging and Debug
-void DebugPacket(void* pData, unsigned int length);
-void WriteLog(const char* Format, ...);
-void WriteDebug(const char* txt);
 
 #endif

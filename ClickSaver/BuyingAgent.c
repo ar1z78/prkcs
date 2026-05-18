@@ -1,0 +1,194 @@
+#include "BuyingAgent.h"
+#include "clicksaver.h"
+
+// Generate a mouse movement and button click sequence
+// to make AO generate new missions.
+// All coordinates are hardcoded because I'm too
+// lazy to make them configurable.
+// However, it's not that much of a problem, since
+// I use coordinates relative to AO window.
+// So, it will work regardless of where the AO window is,
+// and with the mission window in AO snapped to the
+// upper left corner.
+int BuyingAgent(void)
+{
+	HWND AOWnd, BAWnd;
+	POINT MousePos;
+	LPARAM lParam;
+
+	// Find AO window
+	if (!(AOWnd = FindWindow("Anarchy client", NULL)))
+	{
+		//ShowErrorMessage( "Anarchy Online is not running.");
+		puSetAttribute(puGetObjectFromCollection(g_pCol, CS_STATUS_TEXT), PUA_TEXT_STRING, (PUU32)"Anarchy Online is not running.");
+		g_BuyingAgentCount = 0;
+		g_BuyingAgentMissions = 0;
+		return FALSE;
+	}
+
+	// Close main window
+	if (!g_bFullscreen)
+	{
+		// puSetAttribute( g_MainWin, PUA_WINDOW_OPENED, FALSE );
+
+		// Open buying agent window
+		//puSetAttribute(puGetObjectFromCollection(g_pCol, CS_BUYINGAGENT_WINDOW), PUA_WINDOW_OPENED, TRUE);
+
+		// Set keyboard focus on buying agent window
+		//BAWnd = (HWND)puGetAttribute(puGetObjectFromCollection(g_pCol, CS_BUYINGAGENT_WINDOW), PUA_WINDOW_HANDLE);
+		//SetFocus(BAWnd);
+	}
+
+	// Delay
+	//Sleep(puGetAttribute(puGetObjectFromCollection(g_pCol, CS_ROLLWAIT), PUA_TEXTENTRY_VALUE));
+	// === MODIFIED INTERRUPTIBLE DELAY ===
+	int totalWaitTime = puGetAttribute(puGetObjectFromCollection(g_pCol, CS_ROLLWAIT), PUA_TEXTENTRY_VALUE);
+	int elapsedTime = 0;
+	int interval = 50; // Check every 50 milliseconds
+
+	while (elapsedTime < totalWaitTime)
+	{
+		// 1. Process standard Windows messages to keep the GUI responsive
+		MSG msg;
+		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
+
+		// 2. Check the global variables modified by your CSAM_STOPBUYINGAGENT event handler
+		if (g_BuyingAgentCount == 0)
+		{
+			return FALSE; // Stop button was clicked, exit immediately
+		}
+
+		Sleep(interval);
+		elapsedTime += interval;
+	}
+	// ===================================
+
+	// Force AO on top
+	SetForegroundWindow(AOWnd);
+
+	// Now we have the absolute position of the upper-left corner
+	// of AO display area on screen. We can now use that
+	// as a basis to generate mouse positions relative to
+	// the AO window.
+
+	// Click on "request mission"
+
+	// Now that we don't have to move the cursor
+	// around to ungray the request button, we
+	// move the mouse only once, to make it
+	// easy to abort the buying agent while
+	// it's running
+	MousePos.x = 99;
+	MousePos.y = 180;
+	lParam = MousePos.y << 16 | MousePos.x;
+
+	if (g_bFirstRound)
+	{
+		ClientToScreen(AOWnd, &MousePos);
+		SetCursorPos(MousePos.x, MousePos.y);
+		g_bFirstRound = FALSE;
+	}
+
+	SendMessage(AOWnd, WM_LBUTTONDOWN, 0, lParam);
+	SendMessage(AOWnd, WM_LBUTTONUP, 0, lParam);
+
+	return TRUE;
+}
+
+
+void EndBuyingAgent(void)
+{
+	if (!g_bFullscreen)
+	{
+		// Remove keyboard focus
+		//SetFocus(NULL);
+
+		// Close buying agent window
+		//puSetAttribute(puGetObjectFromCollection(g_pCol, CS_BUYINGAGENT_WINDOW), PUA_WINDOW_OPENED, FALSE);
+
+		// Open main window
+		//puSetAttribute( g_MainWin, PUA_WINDOW_OPENED, TRUE );
+	}
+}
+
+
+//slider setting functions
+
+void _dragMouse(int x0, int y0, int x1, int y1)
+{
+	POINT MousePos;
+	LPARAM lParam;
+	HWND AOWnd;
+
+	// Find AO window
+	if (!(AOWnd = FindWindow("Anarchy client", NULL)))
+	{
+		//ShowErrorMessage( "Anarchy Online is not running." );
+		puSetAttribute(puGetObjectFromCollection(g_pCol, CS_STATUS_TEXT), PUA_TEXT_STRING, (PUU32)"Anarchy Online is not running.");
+		g_BuyingAgentCount = 0;
+		g_BuyingAgentMissions = 0;
+		return;
+	}
+	MousePos.x = x0;
+	MousePos.y = y0;
+	lParam = MousePos.y << 16 | MousePos.x;
+	ClientToScreen(AOWnd, &MousePos);
+	SetCursorPos(MousePos.x, MousePos.y);
+	SendMessage(AOWnd, WM_LBUTTONDOWN, 0, lParam);
+	Sleep(250);
+	MousePos.x = x1;
+	MousePos.y = y1;
+	lParam = MousePos.y << 16 | MousePos.x;
+	ClientToScreen(AOWnd, &MousePos);
+	SetCursorPos(MousePos.x, MousePos.y);
+	SendMessage(AOWnd, WM_MOUSEMOVE, 0, lParam);
+	Sleep(250);
+	SendMessage(AOWnd, WM_LBUTTONUP, 0, lParam);
+	Sleep(250);
+}
+
+
+/*
+these coords are from my initial observation with a macro program. they are ofset slightly.
+; options button
+; 200, 185
+; difficulty slider
+; 110, 165
+; 1st slider
+; 110, 210
+; then add 15 pixels in Y for each subsequent row
+; full left slider
+; X = 60
+; full right slider
+; X = 170
+*/
+
+
+float _linIinterp(float lo, float hi, float ratio)
+{
+	return (hi - lo)*ratio + lo;
+}
+
+
+void _setSliders(int easy_hard, int good_bad, int order_chaos, int open_hidden, int phys_myst, int headon_stealth, int money_xp)
+{
+	int ypos = 210;
+
+	//_dragMouse(200, 165, 200, 165);
+	if (easy_hard != 50) _dragMouse(102, 160, (int)_linIinterp(64, 141, easy_hard / 100.0f), 160);
+	if (good_bad != 50) _dragMouse(102, ypos, (int)_linIinterp(64, 141, good_bad / 100.0f), ypos);
+	ypos += 18;
+	if (order_chaos != 50) _dragMouse(102, ypos, (int)_linIinterp(64, 141, order_chaos / 100.0f), ypos);
+	ypos += 18;
+	if (open_hidden != 50) _dragMouse(102, ypos, (int)_linIinterp(64, 141, open_hidden / 100.0f), ypos);
+	ypos += 18;
+	if (phys_myst != 50) _dragMouse(102, ypos, (int)_linIinterp(64, 141, phys_myst / 100.0f), ypos);
+	ypos += 18;
+	if (headon_stealth != 50) _dragMouse(102, ypos, (int)_linIinterp(64, 141, headon_stealth / 100.0f), ypos);
+	ypos += 18;
+	if (money_xp != 50) _dragMouse(102, ypos, (int)_linIinterp(64, 141, money_xp / 100.0f), ypos);
+}

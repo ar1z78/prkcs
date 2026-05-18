@@ -76,7 +76,7 @@ Message_t* DataBlockToMessageHook( int _Size, void* _pDataBlock )
         {
             // Find ClickSaver's hook thread window and send the datas
             // using WM_COPYDATA
-            if( hWnd = FindWindow( "ClickSaverHookWindowClass", "ClickSaverHookWindow" ) )
+            if( hWnd = FindWindow( "Ar1zClickSaverHookWindowClass", "Ar1zClickSaverHookWindow" ) )
             {
                 COPYDATASTRUCT Data;
                 Data.cbData = _Size;
