@@ -120,9 +120,11 @@
     <ClCompile Include="aomd.c" />
     <ClCompile Include="guidef.c" />
     <ClCompile Include="hook.cpp" />
+    <ClCompile Include="menu.c" />
     <ClCompile Include="mission.c" />
     <ClCompile Include="rdb.c" />
     <ClCompile Include="settings.c" />
+    <ClCompile Include="Settings_UI.c" />
     <ClCompile Include="sqlite3.c" />
   </ItemGroup>
   <ItemGroup>
@@ -130,6 +132,7 @@
     <ClInclude Include="clicksaver.h" />
     <ClInclude Include="CoreUtils.h" />
     <ClInclude Include="aomd.h" />
+    <ClInclude Include="Globals.h" />
     <ClInclude Include="mission.h" />
     <ClInclude Include="Platform.h" />
     <ClInclude Include="rdb.h" />

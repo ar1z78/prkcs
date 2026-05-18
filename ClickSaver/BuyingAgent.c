@@ -1,3 +1,4 @@
+#include "globals.h"
 #include "BuyingAgent.h"
 #include "clicksaver.h"
 #include <commctrl.h>
@@ -48,7 +49,7 @@ int BuyingAgent(void)
 	// === MODIFIED INTERRUPTIBLE DELAY ===
 	// Set a timer that will post a WM_TIMER message to the main window after 'delay' ms
 	HWND hMainWnd = (HWND)puGetAttribute(g_MainWin, PUA_WINDOW_HANDLE);
-	int delay = puGetAttribute(puGetObjectFromCollection(g_pCol, CS_ROLLWAIT), PUA_TEXTENTRY_VALUE);
+	int delay = g_Settings.dwWaitTime;
 	g_TimerID = SetTimer(hMainWnd, BUYINGAGENT_TIMER, delay, NULL);
 	if (g_TimerID == 0)
 	{

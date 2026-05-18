@@ -1,3 +1,4 @@
+#include "globals.h"
 #include "clicksaver.h"
 #include "CoreUtils.h"
 #include <windows.h>
@@ -5,12 +6,6 @@
 #include <stdarg.h>
 #include <shlobj.h> // Required for SHBrowseForFolder
 
-// Assuming these exist somewhere in your project, if not,
-// they need to be defined for WriteLog to work.
-#ifndef PUL_GET_CB
-#define PUL_GET_CB(x) (1) // Placeholder
-#define CS_LOG_CB 0       // Placeholder
-#endif
 
 extern "C" {
 	void ShowErrorMessage(const char* message)
@@ -91,7 +86,7 @@ void WriteLog(const char* Format, ...)
 		}
 		return;
 	}
-	if (PUL_GET_CB(CS_LOG_CB))
+	if (g_Settings.bLogging)
 	{
 		if (!fp)
 		{

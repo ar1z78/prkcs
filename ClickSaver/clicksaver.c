@@ -75,12 +75,33 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "rdb.h"
 #include "settings.h"
 #include "BuyingAgent.h"
+#include <commctrl.h>
+#include "globals.h"
+
+/* Instantiate the global storage variable block with stable application defaults */
+PROGRAM_SETTINGS g_Settings = {
+	5000,                     /* dwWaitTime (4.75 seconds) */
+	0, 1, 1, 1, 0, 1, 0,     /* The 7 base option checkbox default states */
+	{ 50, 50, 50, 50, 50, 50, 50 }, /* Array for Sliders: All 7 set to mid-point (50) */
+	4,                        /* iBuyMod (Trader Shop Multiplier default) */
+	0, 0,                /* Single value search disabled, default 100k */
+	0, 0                 /* Total value search disabled, default 100k */
+};
+
+
+#pragma comment(lib, "comctl32.lib")
 
 extern PUU32 g_GUIDef[];
+
 pusObjectCollection* g_pCol;
 PULID g_ItemWatchList, g_LocWatchList, g_MainWin;
+HFONT g_hFont = NULL;
+
 
 void _setSliders( int easy_hard, int good_bad, int order_chaos, int open_hidden, int phys_myst, int headon_stealth, int money_xp );
+void CreateMainMenu(HWND hwnd);
+void CreateSettingsWindow(HWND hwndParent);
+void ShowSettingsWindow(HWND hwndParent);
 
 PUU32 g_BuyingAgentCount = 0;
 PUU32 g_BuyingAgentMissions = 0;
@@ -96,6 +117,7 @@ char g_CSDir[ MAX_PATH ] = { 0 };
 HANDLE g_Mutex = INVALID_HANDLE_VALUE;
 HANDLE g_Thread = INVALID_HANDLE_VALUE;
 DWORD WINAPI HookManagerThread( void *pParam );
+
 
 void CleanUp()
 {
@@ -114,7 +136,7 @@ void CleanUp()
 	puDeleteObjectCollection(g_pCol);
 	puClear();
 }
-// ========== WINDOW SUBCLASS FOR TIMER HANDLING ==========
+// ========== WINDOW SUBCLASS FOR TIMER AND MENU HANDLING ==========
 LRESULT CALLBACK MainWndProcHook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam, UINT_PTR uIdSubclass, DWORD_PTR dwRefData)
 {
 	if (uMsg == WM_TIMER && wParam == BUYINGAGENT_TIMER)
@@ -125,9 +147,29 @@ LRESULT CALLBACK MainWndProcHook(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lPa
 		puPostAppMessage(CSAM_BUYINGAGENT_DOMISSION, 0);
 		return 0;
 	}
+
+	// ADD THIS BLOCK TO HANDLE MENU CLICKS
+	if (uMsg == WM_COMMAND)
+	{
+		switch (LOWORD(wParam))
+		{
+		case ID_WINDOWS_SETTINGS:
+			ShowSettingsWindow(hWnd); // Opens your settings UI window
+			return 0;
+
+		case ID_WINDOWS_SEARCH:
+			// ShowSearchWindow(hWnd); // Uncomment this when Search window is ready
+			return 0;
+
+		case ID_FILE_EXIT:
+			PostQuitMessage(0); // Closes the application cleanly
+			return 0;
+		}
+	}
+
 	return DefSubclassProc(hWnd, uMsg, wParam, lParam);
 }
-// ========================================================
+// ==================================================================
 int main( int argc, char** argv )
 {
     pusAppMessage* pAppMsg;
@@ -173,7 +215,7 @@ int main( int argc, char** argv )
 
     ImportSettings( "LastSettings.cs" );
 
-    if( puGetAttribute( puGetObjectFromCollection( g_pCol, CS_STARTMIN_CB ), PUA_CHECKBOX_CHECKED ) )
+	if (g_Settings.bStartMinimized)
         puSetAttribute( g_MainWin, PUA_WINDOW_ICONIFIED, TRUE );
 
     sprintf( AOExePath, "%s\\anarchy.exe", g_AODir );
@@ -275,6 +317,12 @@ int main( int argc, char** argv )
 	// Subclass the main window to catch WM_TIMER
 	HWND hMainWnd = (HWND)puGetAttribute(g_MainWin, PUA_WINDOW_HANDLE);
 	SetWindowSubclass(hMainWnd, MainWndProcHook, 0, 0);
+	//Set Font
+	g_hFont = CreateFontW(-11, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
+		DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+		DEFAULT_QUALITY, DEFAULT_PITCH | FF_DONTCARE, L"MS Shell Dlg");
+	//create menu
+	CreateMainMenu(hMainWnd);
 
     HICON hIcon = LoadIcon( GetModuleHandle( NULL ), MAKEINTRESOURCE( IDI_ICON1 ) );
     if( hIcon )
@@ -389,7 +437,7 @@ int main( int argc, char** argv )
 
             {
                 pMissionData = g_CurrentPacket;
-                //puSetAttribute( g_MainWin, PUA_WINDOW_DEFERUPDATE, TRUE );
+                puSetAttribute( g_MainWin, PUA_WINDOW_DEFERUPDATE, TRUE );
 
                 WaitForSingleObject( g_Mutex, INFINITE );
                 g_FoundMish = 255;
@@ -418,7 +466,7 @@ int main( int argc, char** argv )
 
                 puSetAttribute( g_MainWin, PUA_WINDOW_DEFERUPDATE, FALSE );
 
-				if (PUL_GET_CB(CS_SOUNDS_CB) && !(pAppMsg->Message == CSAM_STOPBUYINGAGENT))
+				if (g_Settings.bSounds)
                 {
                     if( g_FoundMish == 255 ) // Not Found
                     {
@@ -429,7 +477,7 @@ int main( int argc, char** argv )
                         PlaySound( "found.wav", NULL, SND_FILENAME | SND_NODEFAULT );
                     }
                 }
-                if( PUL_GET_CB( CS_MOUSEMOVE_CB ) || g_BuyingAgentMissions )
+                if( g_Settings.bSelectMatch || g_BuyingAgentMissions )
                 {
                     HWND AOWnd;
                     POINT MousePos;
@@ -479,13 +527,13 @@ int main( int argc, char** argv )
 							Sleep( 2010 );
 
                             {
-                                int easy_hard = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_EASY_HARD ), PUA_TEXTENTRY_VALUE );
-                                int good_bad = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_GOOD_BAD ), PUA_TEXTENTRY_VALUE );
-                                int order_chaos = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_ORDER_CHAOS ), PUA_TEXTENTRY_VALUE );
-                                int open_hidden = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_OPEN_HIDDEN ), PUA_TEXTENTRY_VALUE );
-                                int phys_myst = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_PHYS_MYST ), PUA_TEXTENTRY_VALUE );
-                                int headon_stealth = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_HEADON_STEALTH ), PUA_TEXTENTRY_VALUE );
-                                int money_xp = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_MONEY_XP ), PUA_TEXTENTRY_VALUE );
+								int easy_hard = g_Settings.Sliders[0];
+								int good_bad = g_Settings.Sliders[1];
+								int order_chaos = g_Settings.Sliders[2];
+								int open_hidden = g_Settings.Sliders[3];
+								int phys_myst = g_Settings.Sliders[4];
+								int headon_stealth = g_Settings.Sliders[5];
+								int money_xp = g_Settings.Sliders[6];
 
                                 _setSliders( easy_hard, good_bad, order_chaos, open_hidden, phys_myst, headon_stealth, money_xp );
                             }
@@ -502,7 +550,7 @@ int main( int argc, char** argv )
             break;
 
         case CSAM_STARTBUYINGAGENT:
-			if (puGetAttribute(puGetObjectFromCollection(g_pCol, CS_BAINFO_CB), PUA_CHECKBOX_CHECKED))
+			if (g_Settings.bShowHelp)
 			{
 				ShowInfoMessage("The buying agent will generate missions from the terminal automatically "
 					"until it finds a mission that matches your search criteria. "
@@ -565,30 +613,6 @@ int main( int argc, char** argv )
             }
             break;
 
-        case CSAM_EXPORTSETTINGS:
-        {
-            char buffer[ 2000 ];
-            if( GetFile( (HWND)puGetAttribute( puGetObjectFromCollection( g_pCol, CS_MAIN_WINDOW ), PUA_WINDOW_HANDLE )
-                , TRUE, buffer, 2000 ) )
-            {
-                ExportSettings( buffer );
-            }
-            SetCurrentDirectory( g_CSDir );
-        }
-        break;
-
-        case CSAM_IMPORTSETTINGS:
-        {
-            char buffer[ 2000 ];
-            if( GetFile( (HWND)puGetAttribute( puGetObjectFromCollection( g_pCol, CS_MAIN_WINDOW ), PUA_WINDOW_HANDLE )
-                , FALSE, buffer, 2000 ) )
-            {
-                ImportSettings( buffer );
-            }
-            SetCurrentDirectory( g_CSDir );
-        }
-        break;
-
         case CSAM_STOPFULLSCREEN:
             g_bFullscreen = 0;
             puSetAttribute( puGetObjectFromCollection( g_pCol, CS_FULLSCREEN_WINDOW ), PUA_WINDOW_OPENED, FALSE );
@@ -649,19 +673,7 @@ int main( int argc, char** argv )
         }
         break;
 
-        case CSAM_SET_SLIDERS:
-        {
-            int easy_hard = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_EASY_HARD ), PUA_TEXTENTRY_VALUE );
-            int good_bad = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_GOOD_BAD ), PUA_TEXTENTRY_VALUE );
-            int order_chaos = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_ORDER_CHAOS ), PUA_TEXTENTRY_VALUE );
-            int open_hidden = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_OPEN_HIDDEN ), PUA_TEXTENTRY_VALUE );
-            int phys_myst = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_PHYS_MYST ), PUA_TEXTENTRY_VALUE );
-            int headon_stealth = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_HEADON_STEALTH ), PUA_TEXTENTRY_VALUE );
-            int money_xp = puGetAttribute( puGetObjectFromCollection( g_pCol, CS_SLIDER_MONEY_XP ), PUA_TEXTENTRY_VALUE );
 
-            _setSliders( easy_hard, good_bad, order_chaos, open_hidden, phys_myst, headon_stealth, money_xp );
-        }
-        break;
         }
     }
     while( pAppMsg->Message != CSAM_QUIT );

@@ -49,7 +49,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include "Platform.h"
-
+#include "Globals.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -589,7 +589,7 @@ PUU32 MissionParse( PULID _Object, MissionClassData* _pData, PUU8* _pMissionData
     else
     {
         _pData->pCol = _pData->pTeamCol;
-        puSetAttribute( puGetObjectFromCollection( _pData->pCol, FOLD ), PUA_FOLD_FOLDED, puGetAttribute( puGetObjectFromCollection( g_pCol, CS_EXPAND_CB ), PUA_CHECKBOX_CHECKED ) ? FALSE : TRUE );
+		puSetAttribute(puGetObjectFromCollection(_pData->pCol, FOLD), PUA_FOLD_FOLDED, g_Settings.bAutoExpand ? FALSE : TRUE);
     }
 
     // Ask a complete layout recalculation if we changed of interface
@@ -649,16 +649,16 @@ PUU32 MissionParse( PULID _Object, MissionClassData* _pData, PUU8* _pMissionData
     for( i = 0; i < NumItems; i++ )
     {
         bItemFound |= ShowItem( _pData, pItem++, i + ITEM1, i + ITEMVAL1 );
-        TotalValue += _pData->Reward.Value * puGetAttribute( puGetObjectFromCollection( g_pCol, CS_ITEMVALUE_BUYMOD ), PUA_TEXTENTRY_VALUE ) / 100;
+		TotalValue += _pData->Reward.Value * g_Settings.iBuyMod / 100;
     }
     //if( !g_BuyingAgentCount )
     {
         puSetAttribute( puGetObjectFromCollection( _pData->pCol, TOTALVAL ), PUA_TEXTENTRY_VALUE, TotalValue );
     }
-    if( TotalValue > puGetAttribute( puGetObjectFromCollection( g_pCol, CS_ITEMVALUE_TOTAL ), PUA_TEXTENTRY_VALUE ) )
+    if( TotalValue > g_Settings.iMatchTotalVal )
     {
         puSetAttribute( puGetObjectFromCollection( _pData->pCol, TOTALVAL ), PUA_TEXTENTRY_HILIGHT, TRUE );
-        if( PUL_GET_CB( CS_ITEMVALUE_MTOTAL ) ) bItemFound = TRUE;
+		if (g_Settings.bMatchTotal) bItemFound = TRUE;
     }
     else
     {
@@ -753,7 +753,7 @@ PUU32 MissionParse( PULID _Object, MissionClassData* _pData, PUU8* _pMissionData
         }
         else
         {
-            if( puGetAttribute( puGetObjectFromCollection( g_pCol, CS_MSGBOX_CB ), PUA_CHECKBOX_CHECKED ) && !g_bFullscreen )
+            if( g_Settings.bAlertBox && !g_bFullscreen )
             {
                 // Uniconify window
                 puSetAttribute( g_MainWin, PUA_WINDOW_ICONIFIED, FALSE );
@@ -798,12 +798,12 @@ PUU32 ShowItem( MissionClassData* _pData, Item* _pItem, PUU32 _ObjId, PUU32 _Val
         bItemFound = SetAndSearch( TempStr, puGetObjectFromCollection(
             _pData->pCol, _ObjId ), g_ItemWatchList );
 
-        puSetAttribute( puGetObjectFromCollection( _pData->pCol, _ValID ), PUA_TEXTENTRY_VALUE, _pData->Reward.Value * puGetAttribute( puGetObjectFromCollection( g_pCol, CS_ITEMVALUE_BUYMOD ), PUA_TEXTENTRY_VALUE ) / 100 );
-        if( _pData->Reward.Value * puGetAttribute( puGetObjectFromCollection( g_pCol, CS_ITEMVALUE_BUYMOD ), PUA_TEXTENTRY_VALUE ) / 100
-        > puGetAttribute( puGetObjectFromCollection( g_pCol, CS_ITEMVALUE_SINGLE ), PUA_TEXTENTRY_VALUE ) )
+		puSetAttribute(puGetObjectFromCollection(_pData->pCol, _ValID), PUA_TEXTENTRY_VALUE, g_Settings.iBuyMod / 100);
+		if (_pData->Reward.Value * g_Settings.iBuyMod / 100
+        > g_Settings.iMatchSingleVal )
         {
             puSetAttribute( puGetObjectFromCollection( _pData->pCol, _ValID ), PUA_TEXTENTRY_HILIGHT, TRUE );
-            if( PUL_GET_CB( CS_ITEMVALUE_MSINGLE ) ) bItemFound = TRUE;
+            if( g_Settings.bMatchSingle ) bItemFound = TRUE;
         }
         else
         {
